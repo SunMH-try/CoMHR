@@ -64,17 +64,10 @@ class relation_depth(nn.Module):
     def forward(self, data):
   
         valid = data['valid'].reshape(-1,)
-
         features = data['features']
-        if features.ndim == 3:
-            batch_size, agent_num, d = features.shape
-            features = features.reshape(-1, d)  # [B*N, D]
-
-        else:
-            batch_size = 1
-            agent_num = features.shape[0]
-            d = features.shape[1]
- 
+        batch_size, agent_num, d = data['features'].shape
+        features = data['features'].reshape(-1, d)  # [B*N, D]
+        
         # depth: [B, P, H, W]
         depth = data['depth']
         if depth.ndim == 4:
@@ -164,5 +157,6 @@ class relation_depth(nn.Module):
             'focal_length': focal_length,
             'pred_keypoints_2d': pred_keypoints_2d,
         }
+
 
         return pred

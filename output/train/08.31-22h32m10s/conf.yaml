@@ -1,0 +1,18 @@
+batchsize: 8
+config: cfg_files/config.yaml
+data_folder: data/datasets
+epoch: 20
+gpu_index: 0
+lr: 0.0001
+model: relation_depth
+pretrain: false
+pretrain_dir: F:\grouprec\output\train\08.16-19h46m58s\trained model\best_relation_epoch001_107.866661.pkl
+task: relation
+test_loss: MPJPE_H36M_instance
+testset: Panoptic
+train_loss: SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss Plane_Loss
+trainset: COCO MPII_CLIFF
+use_prior: false
+use_sch: true
+viz: false
+worker: 0

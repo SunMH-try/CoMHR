@@ -9,16 +9,32 @@ from utils.imutils import crop, flip_img
 from utils.FileLoaders import load_pkl
 
 class Relation_Depth_Data(Relation_Feature_Data):
-    def __init__(self, train=True, dtype=torch.float32, data_folder='', name='', smpl=None):
+    def __init__(self, train=True, dtype=torch.float32, data_folder='', name='', smpl=None, h36m_depth_folder=None):
         super(Relation_Depth_Data, self).__init__(train=train, dtype=dtype, data_folder=data_folder, name=name, smpl=smpl)
+        self.h36m_depth_folder = h36m_depth_folder
+
+        self.depth_names = []
+        for f in self.imnames:
+            if "Human36M" in f and self.h36m_depth_folder is not None:
+                # depth 直接在 E:\depth 里
+                fname = os.path.basename(f).replace('.jpg', '.pkl').replace('.png', '.pkl')
+                depth_path = os.path.join(self.h36m_depth_folder, fname)
+            else:
+                # 默认逻辑
+                depth_path = os.path.join(
+                    self.dataset_dir,
+                    f.replace('images', 'depth').replace('.jpg', '.pkl').replace('.png', '.pkl')
+                )
+            self.depth_names.append(depth_path)        
+        
         # 构造 depth 路径
-        self.depth_names = [
-            os.path.join(
-                self.dataset_dir,
-                f.replace('images', 'depth').replace('.jpg', '.pkl').replace('.png', '.pkl')
-            )
-            for f in self.imnames
-        ]
+        # self.depth_names = [
+        #     os.path.join(
+        #         self.dataset_dir,
+        #         f.replace('images', 'depth').replace('.jpg', '.pkl').replace('.png', '.pkl')
+        #     )
+        #     for f in self.imnames
+        # ]
 
 
     @staticmethod
@@ -184,30 +200,30 @@ class Relation_Depth_Data(Relation_Feature_Data):
 
         return load_data
 
-    def vis_raw_depth(self, raw_depth, index=None, save_dir='output_depth_vis'):
-        plt.figure(figsize=(5, 5))
-        plt.imshow(raw_depth, cmap='gray')
-        plt.title("Raw Depth Image")
-        plt.colorbar()
-        plt.axis('off')
-        if index is not None:
-            self.ensure_dir(save_dir)
-            plt.savefig(os.path.join(save_dir, f'depth_{index}_raw.png'), bbox_inches='tight', pad_inches=0)
-        plt.close()
+    # def vis_raw_depth(self, raw_depth, index=None, save_dir='output_depth_vis'):
+    #     plt.figure(figsize=(5, 5))
+    #     plt.imshow(raw_depth, cmap='gray')
+    #     plt.title("Raw Depth Image")
+    #     plt.colorbar()
+    #     plt.axis('off')
+    #     if index is not None:
+    #         self.ensure_dir(save_dir)
+    #         plt.savefig(os.path.join(save_dir, f'depth_{index}_raw.png'), bbox_inches='tight', pad_inches=0)
+    #     plt.close()
 
-    def vis_cropped_depth(self, cropped_depths, valid_mask, index=None, save_dir='output_depth_vis'):
-        for idx in range(cropped_depths.shape[0]):
-            if valid_mask[idx]:
-                plt.figure(figsize=(4, 4))
-                plt.imshow(cropped_depths[idx, 0].numpy(), cmap='gray')
-                plt.title(f"Cropped Depth Person {idx}")
-                plt.colorbar()
-                plt.axis('off')
-                if index is not None:
-                    self.ensure_dir(save_dir)
-                    save_path = os.path.join(save_dir, f'depth_{index}_cropped_person_{idx}.png')
-                    plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
-                plt.close()
+    # def vis_cropped_depth(self, cropped_depths, valid_mask, index=None, save_dir='output_depth_vis'):
+    #     for idx in range(cropped_depths.shape[0]):
+    #         if valid_mask[idx]:
+    #             plt.figure(figsize=(4, 4))
+    #             plt.imshow(cropped_depths[idx, 0].numpy(), cmap='gray')
+    #             plt.title(f"Cropped Depth Person {idx}")
+    #             plt.colorbar()
+    #             plt.axis('off')
+    #             if index is not None:
+    #                 self.ensure_dir(save_dir)
+    #                 save_path = os.path.join(save_dir, f'depth_{index}_cropped_person_{idx}.png')
+    #                 plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+    #             plt.close()
 
     def __getitem__(self, index):
         return self.create_data(index)

@@ -25,9 +25,11 @@ class PastEncoder(nn.Module):
         self.model_dim = args.hidden_dim
         self.scale_number = len(args.hyper_scales)
         self.nmp_layers =args.nmp_layers
-        self.features_project = nn.Linear(1024, 256)
+            
+        # self.input_fc = nn.Linear(in_dim, self.model_dim * 4)
+        # self.input_fc2 = nn.Linear(self.model_dim * 4, self.model_dim * 2)
+        # self.input_fc3 = nn.Linear(self.model_dim * 2, self.model_dim)
 
-      
         self.interaction = MS_HGNN_oridinary(
             embedding_dim=2048,
             h_dim=self.model_dim,
@@ -128,10 +130,7 @@ class PastEncoder(nn.Module):
             viz.append(im)
         return viz
 
-    def forward(self, inputs, features_inputs, batch_size, agent_num, mask):
-        features_inputs = self.features_project(features_inputs.view(batch_size*agent_num, -1))
-        features_inputs = features_inputs.view(batch_size, agent_num, -1)
-
+    def forward(self, inputs, batch_size, agent_num, mask):
         length = inputs.shape[1]
         if self.training:
             # drop_prob = 0.2
@@ -145,7 +144,14 @@ class PastEncoder(nn.Module):
         x=mask.shape
 
 
-
+        # inputs = self.input_fc(inputs) #.view(batch_size*agent_num, self.model_dim)
+        # inputs = self.input_fc2(inputs)
+        # inputs = self.input_fc3(inputs)
+        # tf_in_pos = self.pos_encoder(tf_in, num_a=batch_size*agent_num)
+        # tf_in_pos = tf_in_pos.view(batch_size, agent_num, length, self.model_dim)
+  
+        # ftraj_input = self.input_fc2(tf_in_pos.contiguous().view(batch_size, agent_num, length*self.model_dim))
+        # ftraj_input = self.input_fc3(self.add_category(ftraj_input))
         mask = mask.view(batch_size, agent_num)
         
         mask = torch.matmul(mask[:,:,None], mask[:,None,:])
@@ -161,11 +167,11 @@ class PastEncoder(nn.Module):
         ftraj_inter,_ = self.interaction(ftraj_input, mask)
 
         if len(self.args.hyper_scales) > 0:
-            ftraj_inter_hyper,_ = self.interaction_hyper(features_inputs,feat_corr, mask, viz=False)
+            ftraj_inter_hyper,_ = self.interaction_hyper(ftraj_input,feat_corr, mask, viz=False)
         if len(self.args.hyper_scales) > 1:
-            ftraj_inter_hyper2,_ = self.interaction_hyper2(features_inputs,feat_corr, mask, viz=False)
+            ftraj_inter_hyper2,_ = self.interaction_hyper2(ftraj_input,feat_corr, mask, viz=False)
         if len(self.args.hyper_scales) > 2:
-            ftraj_inter_hyper3,_ = self.interaction_hyper3(features_inputs,feat_corr, mask)
+            ftraj_inter_hyper3,_ = self.interaction_hyper3(ftraj_input,feat_corr, mask)
 
         if len(self.args.hyper_scales) == 0:
             final_feature = torch.cat((ftraj_input,ftraj_inter),dim=-1)
@@ -226,9 +232,11 @@ class relation_head(nn.Module):
     
 
     def forward(self, data):
+        #这里我做一个判断，如果data中有feature的参数应该像下面这么处理，如果没有feature，只有 imgs = torch.zeros((self.max_people, 3, 224, 224)).float()   load_data['img'] = imgs这样的输入的话，让它通过一个ResNet，变成和这里的features一样的大小，再和下面一样去做处理；
         valid = data['valid'].reshape(-1,)
 
         if 'features' in data:
+            # ✅ 使用现成特征
             features = data['features']
             if features.ndim == 3:
                 batch_size, agent_num, d = features.shape
@@ -238,6 +246,7 @@ class relation_head(nn.Module):
                 agent_num = features.shape[0]
                 d = features.shape[1]
         else:
+            # ✅ 没有 features，用 img 提取
             imgs = data['img']  # [B, P, 3, 224, 224]
             batch_size, agent_num = imgs.shape[:2]
             imgs = imgs.reshape(batch_size * agent_num, 3, 224, 224)
@@ -246,9 +255,27 @@ class relation_head(nn.Module):
             features = torch.zeros((batch_size * agent_num, 2048), device=imgs.device, dtype=imgs.dtype)
             features[valid == 1] = self.rgb_encoder(valid_imgs)
 
-  
+        # depth: [B, P, H, W]
+        # depth = data['depth']
+        # if depth.ndim == 4:
+        #     B, P, H, W = depth.shape
+        #     depth = depth.reshape(B * P, H, W)
+
+        # depth = depth.unsqueeze(1)  # → [B*P, 1, H, W]
+        # depth_input = depth.repeat(1, 3, 1, 1)  # → [B*P, 3, H, W]
+        # depth_feat = self.depth_encoder(depth_input)  # → [N, 2048]
+        # depth_feat = self.depth_fc(depth_feat)        # → [N, 2048]
+
+        # RGB features
         rgb_features = self.project1(features) # → [N, 1024]
 
+        # Depth features
+        # depth_features = self.project1(depth_feat)  # → [N, 1024]
+
+        # RGB + Depth concat
+        #features = torch.cat([rgb_features, depth_features], dim=1)  # → [N, 2048]
+
+        # bbox info
         center = data['center'].reshape(batch_size * agent_num, -1)
         scale = data['scale'].reshape(batch_size * agent_num,)
         img_h = data['img_h'].reshape(batch_size * agent_num,)

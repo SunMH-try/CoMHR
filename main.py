@@ -21,8 +21,8 @@ def collate_skip_none(batch):
     return torch.utils.data.dataloader.default_collate(batch) 
 
 ###########Load config file in debug mode#########
-# import sys
-# sys.argv = ['','--config=cfg_files/config.yaml'] #MoCap End2End HMAE_conv Lifting
+import sys
+sys.argv = ['','--config=cfg_files/config.yaml'] #MoCap End2End HMAE_conv Lifting
 
 def main(**args):
     seed = 7

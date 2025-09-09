@@ -52,8 +52,8 @@ class Relation_Feature_Data(base):
             if len(seq) < 1:
                 continue
             for i, frame in enumerate(seq):
-                # if i > 10:
-                #     break
+                if i > 10:
+                    break
                 features, pose2ds, poses, shapes, bboxs, intris, centers, scales, joints = [], [], [], [], [], [], [], [], []
                 for key in frame.keys():
                     if key in ['img_path', 'h_w', 'depth_path']:

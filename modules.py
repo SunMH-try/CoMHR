@@ -172,18 +172,23 @@ class LossLoader():
             elif ltype == 'Joint_reg_Loss':
                 Joint_reg_Loss = self.train_loss['Joint_reg_Loss'](pred['transformer_joints'], gt['gt_joints'], gt['has_3d'])
                 loss_dict = {**loss_dict, **Joint_reg_Loss}
-            # Calculate your loss here
-
-            # elif ltype == 'Smooth6D':
-            #     loss_dict.update(Smooth6D=self.train_loss['Smooth6D'](pred_pose))
             else:
                 pass
+
+        # ===== 在这里加 Contrastive Loss =====
+        if 'loss_contrastive' in pred and pred['loss_contrastive'] is not None:
+            lambda_contrast = 0.1  # 权重，可以调
+            loss_dict['Contrastive'] = pred['loss_contrastive'] * lambda_contrast
+
+        # ===== 合并所有 loss =====
         loss = 0
         for k in loss_dict:
-            loss_temp = loss_dict[k] * 60.
+            loss_temp = loss_dict[k] * 60.   # 保持和原逻辑一致
             loss += loss_temp
             loss_dict[k] = round(float(loss_temp.detach().cpu().numpy()), 6)
+
         return loss, loss_dict
+
 
 
     def calcul_testloss(self, pred, gt):

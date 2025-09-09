@@ -195,8 +195,8 @@ class Relation_Depth_Data(Relation_Feature_Data):
         load_data["focal_length"] = focal_lengthes
 
         # 可视化
-        self.vis_raw_depth(raw_depth, index=index)
-        self.vis_cropped_depth(depth_imgs.unsqueeze(1), valid_mask, index=index)
+        # self.vis_raw_depth(raw_depth, index=index)
+        # self.vis_cropped_depth(depth_imgs.unsqueeze(1), valid_mask, index=index)
 
         return load_data
 

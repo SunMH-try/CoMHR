@@ -48,9 +48,10 @@ class Relation_Depth_Data(Relation_Feature_Data):
         )
         if flip:
             depth_img = flip_img(depth_img)
-        noise_factor = np.random.uniform(0.95, 1.05)
-        depth_img *= noise_factor
-        depth_img = np.clip(depth_img, 0, 255)
+        # noise_factor = np.random.uniform(0.95, 1.05)
+        # depth_img *= noise_factor
+        depth_img = np.clip(depth_img, 0, 1000)
+        depth_img = depth_img / 1000.
         depth_img = depth_img.astype(np.float32)
         return depth_img, ul, br, new_shape, new_x, new_y, old_x, old_y
 

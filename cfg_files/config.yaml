@@ -1,5 +1,5 @@
 # experiment name
-note: train
+note: test
 
 #project basic
 task: relation  # hmr relation joint
@@ -15,10 +15,10 @@ use_sch: True
 #********dataset*********#
 # The path for datasets and annotations
 data_folder: F:\grouprec\data\datasets #data/datasets
-# h36m_depth_folder: E:\depth
+h36m_depth_folder: E:\depth
 
 # Human36M_MOSH MPII_CLIFF COCO CrowdPose Panda JTA AGORA JTA_fitting
-trainset: COCO #Human36M_MOSH COCO MPII_CLIFF #Human36M_MOSH MPII_CLIFF CrowdPose Panda
+trainset: MPII_CLIFF #Human36M_MOSH MPII_CLIFF CrowdPose Panda
 # 3DMPB MuPoTS Panoptic JTA AGORA GigaCrowd_train Internet_imgs
 testset: Panoptic
 

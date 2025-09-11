@@ -177,7 +177,7 @@ class LossLoader():
 
         # ===== 在这里加 Contrastive Loss =====
         if 'loss_contrastive' in pred and pred['loss_contrastive'] is not None:
-            lambda_contrast = 0.1  # 权重，可以调
+            lambda_contrast = 0.1  # 权重
             loss_dict['Contrastive'] = pred['loss_contrastive'] * lambda_contrast
 
         # ===== 合并所有 loss =====
@@ -188,23 +188,6 @@ class LossLoader():
             loss_dict[k] = round(float(loss_temp.detach().cpu().numpy()), 6)
 
         return loss, loss_dict
-
-
-        # ===== 在这里加 Contrastive Loss =====
-        if 'loss_contrastive' in pred and pred['loss_contrastive'] is not None:
-            lambda_contrast = 0.1  # 权重，可以调
-            loss_dict['Contrastive'] = pred['loss_contrastive'] * lambda_contrast
-
-        # ===== 合并所有 loss =====
-        loss = 0
-        for k in loss_dict:
-            loss_temp = loss_dict[k] * 60.   # 保持和原逻辑一致
-            loss += loss_temp
-            loss_dict[k] = round(float(loss_temp.detach().cpu().numpy()), 6)
-
-        return loss, loss_dict
-
-
 
 
     def calcul_testloss(self, pred, gt):

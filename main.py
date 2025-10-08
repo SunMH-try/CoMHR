@@ -5,6 +5,7 @@
  @Email       : hbz@seu.edu.cn
  @Description : 
 '''
+
 import os
 import torch
 from torch.utils.data import DataLoader
@@ -12,6 +13,11 @@ from cmd_parser import parse_config
 from utils.module_utils import seed_worker, set_seed
 from modules import init, LossLoader, ModelLoader, DatasetLoader
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+import numpy as np
+torch._dynamo.disable() 
+import builtins
+builtins.float = np.float_
+builtins.complex = np.complex_
 
 # 自定义 collate_fn，过滤 None
 def collate_skip_none(batch):
@@ -26,7 +32,12 @@ sys.argv = ['','--config=cfg_files/config.yaml'] #MoCap End2End HMAE_conv Liftin
 
 def main(**args):
     seed = 7
-    g = set_seed(seed)
+    set_seed(seed)  # 固定 Python/numpy/torch 的 seed
+
+    # 为 DataLoader 单独建 generator
+    g = torch.Generator()
+    g.manual_seed(seed)
+
 
     # Global setting
     dtype = torch.float32

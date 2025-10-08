@@ -15,6 +15,7 @@ import sys
 import os
 import configargparse
 
+
 def parse_config(argv=None):
     arg_formatter = configargparse.ArgumentDefaultsHelpFormatter
     cfg_parser = configargparse.YAMLConfigFileParser
@@ -23,7 +24,7 @@ def parse_config(argv=None):
                                       config_file_parser_class=cfg_parser,
                                       description=description,
                                       prog='template')
-
+    # parser = configargparse.ArgParser() 
     parser.add_argument('--trainset',
                         default='',
                         type=str,

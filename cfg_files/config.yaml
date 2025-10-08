@@ -1,5 +1,7 @@
 # experiment name
-note: test
+# note: SimpleTest
+note: Simple_Multi_test_includepose
+#Revise_01
 
 #project basic
 task: relation  # hmr relation joint
@@ -7,8 +9,8 @@ task: relation  # hmr relation joint
 #model basic
 gpu_index: 0
 lr: 0.0001
-batchsize: 2
-epoch: 20
+batchsize: 8
+epoch: 50
 worker: 0
 use_sch: True
 
@@ -18,7 +20,7 @@ data_folder: F:\grouprec\data\datasets #data/datasets
 h36m_depth_folder: E:\depth
 
 # Human36M_MOSH MPII_CLIFF COCO CrowdPose Panda JTA AGORA JTA_fitting
-trainset: MPII_CLIFF #Human36M_MOSH MPII_CLIFF CrowdPose Panda
+trainset: COCO #Human36M_MOSH MPII_CLIFF CrowdPose Panda
 # 3DMPB MuPoTS Panoptic JTA AGORA GigaCrowd_train Internet_imgs
 testset: Panoptic
 
@@ -30,7 +32,8 @@ mode: train # train/test/eval
 
 # Use pretrain model and the corresponding path
 pretrain: False
-pretrain_dir: F:\Multimodal\output\train\09.06-23h01m48s\trained model\best_relation_epoch004_114.605240.pkl
+pretrain_dir: F:\Multimodal\output\Simple_depth\09.24-23h23m35s\trained model\best_relation_epoch014_159.144165.pkl
+# F:\Multimodal\output\testDepth\09.14-00h25m32s\trained model\best_relation_epoch003_112.334091.pkl
 
 #\\105.1.1.104\d\BuzhenHuang_Programs\CrowdPeople\Regression\output\pose_transformer_v8_mix\01.03-14h21m23s\trained model\hmr_epoch310.pkl
 

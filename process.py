@@ -129,7 +129,7 @@ def relation_test(model, loss_func, loader, device=torch.device('cpu')):
 
             # matched = [idx for idx, name in enumerate(data['ori_imgname']) if "100791" in name]
             # if len(matched) > 0:
-            if i < 1:
+            if i<1:
                 results = {}
                 results.update(imgs=data['ori_imgname'])
                 results.update(pred_trans=pred['pred_cam_t'].detach().cpu().numpy().astype(np.float32))

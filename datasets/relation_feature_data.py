@@ -20,7 +20,7 @@ from datasets.base import base
 import constants
 from tqdm import tqdm
 import matplotlib
-matplotlib.use('Agg')  # 非交互式后端，专门用于生成图片文件，无窗口
+matplotlib.use('Agg') 
 import matplotlib.pyplot as plt
 import os
 import torch
@@ -40,14 +40,13 @@ class Relation_Feature_Data(base):
         self.joint_dataset = ['Panoptic', 'JTA']
 
         if self.is_train:
-            dataset_annot = os.path.join(self.dataset_dir, 'annot/new_train.pkl')
+            dataset_annot = os.path.join(self.dataset_dir, 'annot/final_train.pkl')
         else:
             self.eval = True
             dataset_annot = os.path.join(self.dataset_dir,'annot/new_test.pkl')
 
         params = self.load_pkl(dataset_annot)
         self.features, self.poses, self.shapes, self.imnames, self.masks, self.img_size, self.bboxs, self.intris, self.centers, self.scales, self.pose2ds, self.joints = [], [], [], [], [], [], [], [], [], [], [], []
-        #scales, self.pose2ds, self.joints, self.depth_names = [], [], [], [], [], [], [], [], [], [], [], [], []
         for seq in tqdm(params, total=len(params)):
             if len(seq) < 1:
                 continue
@@ -94,8 +93,6 @@ class Relation_Feature_Data(base):
                 if len(features) > 0:
                     self.img_size.append(frame['h_w'])
                     self.imnames.append(frame['img_path'])
-                    #self.depth_names.append(frame['depth_path'])
-
                     self.features.append(features)
                     self.centers.append(centers)
                     self.scales.append(scales)
@@ -121,7 +118,6 @@ class Relation_Feature_Data(base):
         for key, valid, new_shape, new_x, new_y, old_x, old_y in zip(keypoints, valids, new_shapes, new_xs, new_ys, old_xs, old_ys):
             if valid == 1:
                 key = keyp_crop2origin(key.clone(), new_shape, new_x, new_y, old_x, old_y)
-                # keypoints = keypoints[:,:-1].detach().numpy() * constants.IMG_RES + center.numpy()
                 key = key[:,:-1].astype(np.int)
                 for k in key:
                     image = cv2.circle(image, tuple(k), 3, (0,0,255), -1)
@@ -131,7 +127,6 @@ class Relation_Feature_Data(base):
         for key, valid, new_shape, new_x, new_y, old_x, old_y in zip(pred_keypoints, valids, new_shapes, new_xs, new_ys, old_xs, old_ys):
             if valid == 1:
                 key = keyp_crop2origin(key.clone(), new_shape, new_x, new_y, old_x, old_y)
-                # keypoints = keypoints[:,:-1].detach().numpy() * constants.IMG_RES + center.numpy()
                 key = key[:,:-1].astype(np.int)
                 for k in key:
                     image = cv2.circle(image, tuple(k), 3, (0,255,0), -1)
@@ -159,7 +154,6 @@ class Relation_Feature_Data(base):
 
     def estimate_trans_cliff(self, joints, keypoints, center, focal_length, img_h, img_w):
         joints = joints.detach().numpy()
-        # keypoints[:,:-1] = keypoints[:,:-1] * constants.IMG_RES + np.array(center)
         
         gt_cam_t = estimate_translation_np(joints, keypoints[:,:2], keypoints[:,2], focal_length=focal_length, center=[img_w/2, img_h/2])
         return gt_cam_t
@@ -196,11 +190,7 @@ class Relation_Feature_Data(base):
         img_hs = np.zeros((self.max_people), dtype=np.float32)
         img_ws = np.zeros((self.max_people), dtype=np.float32)
         focal_lengthes = np.ones((self.max_people), dtype=np.float32)
-        #depths = torch.zeros((self.max_people, crop_size, crop_size)).float()
-        
-        #depth = load_pkl(os.path.join(self.dataset_dir, self.depth_names[index]))['depth_image']
 
-        # vis depth
 
         for idx in range(num_people):
             if idx >= self.max_people:
@@ -293,35 +283,6 @@ class Relation_Feature_Data(base):
             xmax = int(min(img_w, xmax))
             ymax = int(min(img_h, ymax))
 
-            # 如果bbox有效，进行裁剪并resize（避免畸变）
-            # if xmin < xmax and ymin < ymax:
-            #     cropped_depth = depth[ymin:ymax, xmin:xmax]
-
-            #     # 原始尺寸
-            #     h, w = cropped_depth.shape
-            #     scale = crop_size / max(h, w)
-            #     new_w, new_h = int(w * scale), int(h * scale)
-                
-            #     # 缩放后图像
-            #     resized = cv2.resize(cropped_depth, (new_w, new_h), interpolation=cv2.INTER_NEAREST)
-                
-            #     # 创建目标图像，初始化为0（padding）
-            #     canvas = np.zeros((crop_size, crop_size), dtype=resized.dtype)
-                
-            #     # 计算居中的位置（pad）
-            #     top = (crop_size - new_h) // 2
-            #     left = (crop_size - new_w) // 2
-                
-            #     canvas[top:top+new_h, left:left+new_w] = resized
-            #     depths[idx] = torch.from_numpy(canvas).float()
-            # else:
-            #     depths[idx] = torch.zeros((crop_size, crop_size)).float()
-
-
-            # vis crop depth
-
-        # 将所有depth拼成一个 tensor 后返回
-        #load_data['depth'] = depths  # 返回统一尺寸的深度图
         load_data['features'] = img_features
 
         load_data['valid'] = valid

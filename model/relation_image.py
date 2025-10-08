@@ -5,7 +5,7 @@ from torch.nn import functional as F
 from utils.imutils import cam_crop2full, vis_img
 from .HumanGroupNet import MS_HGNN_oridinary,MS_HGNN_hyper
 from collections import namedtuple
-from utils.geometry import perspective_projection
+from utils.geometry import perspective_projection, rot6d_to_rotmat
 from utils.rotation_conversions import *
 import cv2
 from model.backbones.resnet50 import ResNet50
@@ -198,16 +198,16 @@ class relation_head(nn.Module):
         
         self.past_encoder = PastEncoder(self.args)
 
-        embed_dim = 3072  # 修改为实际特征维度
+        embed_dim = 2048  # 修改为实际特征维度
         out_dim = 24 * 6
         hidden_dim = 256
         self.project = nn.Sequential(
-            nn.LayerNorm(2051),  # 2048 + 3 = 2051
-            nn.Linear(2051, hidden_dim),
+            nn.LayerNorm(embed_dim+3),  # 2048 + 3 = 2051
+            nn.Linear(embed_dim+3, hidden_dim),
         )
         self.project1 = nn.Sequential(
-            nn.LayerNorm(2048),
-            nn.Linear(2048, 1024),
+            nn.LayerNorm(embed_dim),
+            nn.Linear(embed_dim, 1024),
         )
         self.head = nn.Sequential(
             nn.LayerNorm(embed_dim + 3),  
@@ -221,8 +221,6 @@ class relation_head(nn.Module):
             nn.LayerNorm(embed_dim + 3),  # 2048 + 3 = 2051
             nn.Linear(embed_dim + 3, 10),
         )
-        self.depth_encoder = ResNet50()
-        self.depth_fc = nn.Linear(2048, 2048)
         self.rgb_encoder = ResNet50()
         self.rgb_fc = nn.Linear(2048, 2048)        
 
@@ -232,7 +230,6 @@ class relation_head(nn.Module):
     
 
     def forward(self, data):
-        #这里我做一个判断，如果data中有feature的参数应该像下面这么处理，如果没有feature，只有 imgs = torch.zeros((self.max_people, 3, 224, 224)).float()   load_data['img'] = imgs这样的输入的话，让它通过一个ResNet，变成和这里的features一样的大小，再和下面一样去做处理；
         valid = data['valid'].reshape(-1,)
 
         if 'features' in data:
@@ -255,26 +252,8 @@ class relation_head(nn.Module):
             features = torch.zeros((batch_size * agent_num, 2048), device=imgs.device, dtype=imgs.dtype)
             features[valid == 1] = self.rgb_encoder(valid_imgs)
 
-        # depth: [B, P, H, W]
-        # depth = data['depth']
-        # if depth.ndim == 4:
-        #     B, P, H, W = depth.shape
-        #     depth = depth.reshape(B * P, H, W)
 
-        # depth = depth.unsqueeze(1)  # → [B*P, 1, H, W]
-        # depth_input = depth.repeat(1, 3, 1, 1)  # → [B*P, 3, H, W]
-        # depth_feat = self.depth_encoder(depth_input)  # → [N, 2048]
-        # depth_feat = self.depth_fc(depth_feat)        # → [N, 2048]
-
-        # RGB features
-        rgb_features = self.project1(features) # → [N, 1024]
-
-        # Depth features
-        # depth_features = self.project1(depth_feat)  # → [N, 1024]
-
-        # RGB + Depth concat
-        #features = torch.cat([rgb_features, depth_features], dim=1)  # → [N, 2048]
-
+        features = data['features'].reshape(-1, d)
         # bbox info
         center = data['center'].reshape(batch_size * agent_num, -1)
         scale = data['scale'].reshape(batch_size * agent_num,)
@@ -288,12 +267,13 @@ class relation_head(nn.Module):
         bbox_info[:, 2] = (bbox_info[:, 2] - 0.24 * focal_length) / (0.06 * focal_length)
 
         # Concat: features + bbox_info → project
-        aff_features = torch.cat([features, bbox_info], dim=1)  # → [N, 2051]
+        aff_features = torch.cat([features, bbox_info], dim=1)
         inputs = self.project(aff_features)  # → [N, hidden_dim]
+        rgb_features = self.project1(features) 
         relation_features = self.past_encoder(inputs, batch_size, agent_num, valid)
 
         # extract valid entries
-        features = features[valid == 1]
+        rgb_features = rgb_features[valid == 1]
         relation_features = relation_features[valid == 1]
         center = center[valid == 1]
         scale = scale[valid == 1]
@@ -303,19 +283,18 @@ class relation_head(nn.Module):
         bbox_info = bbox_info[valid == 1]
 
         # fuse relation
-        feature = torch.cat([features, relation_features], dim=1)  # → [N_valid, 3072]
-        num_valid = feature.shape[0]
+        feature = torch.cat([rgb_features, relation_features], dim=1)  # → [N_valid, 3072]
+        num_valid = len(feature)
         
 
         # Final concat
-        xc = torch.cat([feature, bbox_info], dim=1)  # → [N_valid, 3075]
-
+        xc = torch.cat([feature, bbox_info], 1)
         # Heads
         pred_pose = self.head(xc)
         pred_shape = self.shape_head(xc).view(num_valid, 10)
         pred_cam = self.cam_head(xc).view(num_valid, 3)
 
-        pred_rotmat = rotation_6d_to_matrix(pred_pose).view(num_valid, 24, 3, 3)
+        pred_rotmat = rot6d_to_rotmat(pred_pose).view(num_valid, 24, 3, 3)
         pred_pose = matrix_to_axis_angle(pred_rotmat.view(-1, 3, 3)).view(num_valid, 72)
 
         full_img_shape = torch.stack((img_h, img_w), dim=-1)

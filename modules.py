@@ -788,6 +788,7 @@ class DatasetLoader():
     def load_trainset(self):
         train_dataset = []
         for i in range(len(self.trainset)):
+            # dataset=Relation_Feature_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
             dataset = Relation_Depth_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
             train_dataset.append(dataset)
 
@@ -799,6 +800,7 @@ class DatasetLoader():
         test_dataset = []
         for i in range(len(self.testset)):
             if self.task == 'relation':
+                # test_dataset.append(Relation_Feature_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
                 test_dataset.append(Relation_Depth_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
 
         test_dataset = torch.utils.data.ConcatDataset(test_dataset)

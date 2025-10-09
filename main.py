@@ -5,7 +5,8 @@
  @Email       : hbz@seu.edu.cn
  @Description : 
 '''
-
+import vtkmodules
+print(f"vtkmodules 版本:{vtkmodules.__version__}")
 import os
 import torch
 from torch.utils.data import DataLoader
@@ -15,9 +16,9 @@ from modules import init, LossLoader, ModelLoader, DatasetLoader
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import numpy as np
 torch._dynamo.disable() 
-import builtins
-builtins.float = np.float_
-builtins.complex = np.complex_
+# import builtins
+# builtins.float = np.float_
+# builtins.complex = np.complex_
 
 # 自定义 collate_fn，过滤 None
 def collate_skip_none(batch):

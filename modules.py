@@ -30,7 +30,7 @@ from utils.visualize_pose import show_poses
 from utils.pose import Pose
 from datasets.relation_feature_data import Relation_Feature_Data
 from datasets.relation_depth_data import Relation_Depth_Data
-
+from datasets.relation_pose_data import Relation_Pose_Data
 
 def init(note='occlusion', dtype=torch.float32, mode='eval', **kwargs):
     # Create the folder for the current experiment
@@ -789,7 +789,7 @@ class DatasetLoader():
         train_dataset = []
         for i in range(len(self.trainset)):
             # dataset=Relation_Feature_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
-            dataset = Relation_Depth_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
+            dataset = Relation_Pose_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
             train_dataset.append(dataset)
 
         train_dataset = torch.utils.data.ConcatDataset(train_dataset)
@@ -801,7 +801,7 @@ class DatasetLoader():
         for i in range(len(self.testset)):
             if self.task == 'relation':
                 # test_dataset.append(Relation_Feature_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
-                test_dataset.append(Relation_Depth_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
+                test_dataset.append(Relation_Pose_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
 
         test_dataset = torch.utils.data.ConcatDataset(test_dataset)
         return test_dataset

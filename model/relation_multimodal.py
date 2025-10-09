@@ -47,7 +47,7 @@ class relation_multimodal(nn.Module):
         return total_loss
     
     
-    def __init__(self, smpl, num_joints=21):
+    def __init__(self, smpl, num_joints=18):
         super().__init__()
         self.smpl = smpl
         self.args = args(hidden_dim=256, hyper_scales=[3,5], learn_prior=True, nmp_layers=1)
@@ -60,8 +60,7 @@ class relation_multimodal(nn.Module):
         self.past_encoder_depth = PastEncoder(self.args)
         self.past_encoder_pose  = PastEncoder(self.args)
 
-
-        embed_dim = 4096 
+        embed_dim = 5120 # RGB=2048, depht=2048, pose=1024
         out_dim = 24 * 6
         hidden_dim = 256
         self.project = nn.Sequential(
@@ -76,17 +75,22 @@ class relation_multimodal(nn.Module):
             nn.LayerNorm(2048),
             nn.Linear(2048, 1024),
         )
+        self.project_pose = nn.Sequential(
+            nn.LayerNorm(18*3),
+            nn.Linear(18*3, 1024),
+        )
+
         self.head = nn.Sequential(
-            nn.LayerNorm(6147),  
-            nn.Linear(6147, out_dim),
+            nn.LayerNorm(8195),  
+            nn.Linear(8195, out_dim),
         )
         self.cam_head = nn.Sequential(
-            nn.LayerNorm(6147),  
-            nn.Linear(6147, 3),
+            nn.LayerNorm(8195),  
+            nn.Linear(8195, 3),
         )
         self.shape_head = nn.Sequential(
-            nn.LayerNorm(6147), 
-            nn.Linear(6147, 10),
+            nn.LayerNorm(8195), 
+            nn.Linear(8195, 10),
         )
         self.depth_encoder = ResNet50(input_c=1)
         self.depth_fc = nn.Linear(2048, 2048)
@@ -113,19 +117,16 @@ class relation_multimodal(nn.Module):
         depth_feat = self.depth_fc(depth_feat)
 
         # --------------------- pose 特征 ---------------------
-        keypoints_3d = torch.tensor(data['keypoints_3d'], dtype=torch.float32, device=features.device)  # (B,P,J,3)
-        keypoints_mask = torch.tensor(data['mask'], dtype=torch.float32, device=features.device)        # (B,P,J)
-        Tz = torch.tensor(data['Tz'], dtype=torch.float32, device=features.device)                      # (B,P)
+        keypoints_3d = data['keypoints_3d'].to(features.device).float()# (B,P,J,3)
+        keypoints_mask = data['mask'].to(features.device).float()# (B,P,J)      
+        Tz = data['Tz'].float().to(features.device)  # (B,P)
 
         # apply mask 到关节
         keypoints_mask = keypoints_mask.unsqueeze(-1)            # (B,P,J,1)
         keypoints_3d_masked = keypoints_3d * keypoints_mask      # (B,P,J,3)
 
         # flatten 后送进 pose encoder
-        pose_feat = self.pose_encoder(keypoints_3d_masked.view(batch_size * agent_num, -1))  # (B*P,d)
-
-        # 拼接 Tz
-        pose_feat = torch.cat([pose_feat, Tz.view(batch_size * agent_num, 1)], dim=-1)
+        pose_feat = self.project_pose(keypoints_3d_masked.view(batch_size * agent_num, -1))
 
         # --------------------- 多模态 concat ---------------------
         features_concat = torch.cat([features, depth_feat, pose_feat], dim=1)
@@ -147,7 +148,7 @@ class relation_multimodal(nn.Module):
         # --------------------- 各模态 projection ---------------------
         rgb_features   = self.project_rgb(features)
         depth_features = self.project_depth(depth_feat)
-        pose_features  = self.project_pose(pose_feat)
+        pose_features = pose_feat
 
         # --------------------- PastEncoder 三模态 ---------------------
         Tz_flat = Tz.view(-1, 1)  # (B*P,1)
@@ -209,7 +210,7 @@ class relation_multimodal(nn.Module):
             'focal_length': focal_length_valid,
             'pred_keypoints_2d': pred_keypoints_2d,
         }
-  
+
         # ---------------- contrastive loss ----------------
         gt_joints = data['gt_joints']  # shape = [batch_size, actual_agent_num, joint_num, dim]
 

@@ -67,6 +67,7 @@ class PastEncoder(nn.Module):
                 nmp_layers=self.nmp_layers,
                 scale=args.hyper_scales[2]
             )
+        self.Tz_project = nn.Linear(1, self.model_dim)
 
     
     def add_category(self,x):
@@ -149,9 +150,9 @@ class PastEncoder(nn.Module):
 
         # --------- ✅ 在这里拼接 Tz ---------
         if Tz is not None:
-            Tz = Tz.view(batch_size, agent_num, 1)  # 保证维度 (B, N, 1)
-            ftraj_input = torch.cat([ftraj_input, Tz], dim=-1)
-
+            Tz = Tz.view(batch_size, agent_num, 1)  # (B, N, 1)
+            Tz_feat = self.Tz_project(Tz)           # 映射到 256 维
+            ftraj_input = ftraj_input + Tz_feat     # 加上而不是拼接
         # mask 转换成 pairwise 矩阵 (B, N, N)
         mask = mask.view(batch_size, agent_num)
         mask = torch.matmul(mask[:, :, None], mask[:, None, :])

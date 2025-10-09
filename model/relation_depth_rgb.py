@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from utils.imutils import cam_crop2full
-from model.PastEncoder_depth_rgb import PastEncoder
+from model.PastEncoder_depth_rgb import PastEncoder_depth_rgb
 from collections import namedtuple
 from utils.geometry import perspective_projection, rot6d_to_rotmat
 from utils.rotation_conversions import *
@@ -68,8 +68,8 @@ class relation_depth_rgb(nn.Module):
         # models
         scale_num = 2 + len(self.args.hyper_scales)
         
-        self.past_encoder_rgb   = PastEncoder(self.args)
-        self.past_encoder_depth = PastEncoder(self.args)
+        self.past_encoder_rgb   = PastEncoder_depth_rgb(self.args)
+        self.past_encoder_depth = PastEncoder_depth_rgb(self.args)
 
 
 

@@ -1,9 +1,9 @@
-name: Multimodal_new
+name: Multimodal
 channels:
   - conda-forge
   - defaults
 dependencies:
-  # Conda 可用核心包
+  # Conda
   - python=3.9
   - numpy=1.23.5
   - pandas=1.4.3
@@ -14,7 +14,7 @@ dependencies:
   - ipython=8.12.2
   - pip
 
-  # pip-only 包（conda install cython -c conda-forge//pip install pycocotools// pip install Pillow这三个自己装）
+  # pip-only （conda install cython -c conda-forge//pip install pycocotools// pip install Pillow）
   - pip:
       - torch
       - torchvision

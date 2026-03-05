@@ -2,14 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Debug eval_giga",
             "type": "debugpy",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
+            "module": "utils.eval_giga",
+            "cwd": "${workspaceFolder:Multimodal}",
             "justMyCode": false,
-            "cwd": "${workspaceFolder}",
-            "purpose": ["debug-in-terminal"]
+            "console": "integratedTerminal"
         }
     ]
 }

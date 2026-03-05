@@ -48,7 +48,6 @@ class MLP_dict_softmax(nn.Module):
         return out, distribution
 
 class MS_HGNN_oridinary(nn.Module):
-    """Pooling module as proposed in our paper"""
     def __init__(
         self, embedding_dim=64, h_dim=64, mlp_dim=1024, bottleneck_dim=1024,
         activation='relu', batch_norm=True, dropout=0.0, nmp_layers=4, vis=False

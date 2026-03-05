@@ -1,47 +1,36 @@
 # experiment name
-# note: SimpleTest
-note: Simple_Multi_test_includepose
-#Revise_01
+note: Test
 
-#project basic
-task: relation  # hmr relation joint
+# project basic
+task: relation 
 
-#model basic
+# model basic
 gpu_index: 0
 lr: 0.0001
 batchsize: 8
-epoch: 50
+epoch: 60
 worker: 0
 use_sch: True
 
-#********dataset*********#
+# dataset
 # The path for datasets and annotations
-data_folder: F:\grouprec\data\datasets #data/datasets
-h36m_depth_folder: E:\depth
+data_folder: data/datasets
 
-# Human36M_MOSH MPII_CLIFF COCO CrowdPose Panda JTA AGORA JTA_fitting
-trainset: MPII_CLIFF #COCO #Human36M_MOSH MPII_CLIFF CrowdPose Panda
-# 3DMPB MuPoTS Panoptic JTA AGORA GigaCrowd_train Internet_imgs
-testset: Panoptic
+trainset: MPII_CLIFF COCO 
+testset: Panoptic # GigaCrowd 
 
-# cliff hmr cliff_hmr pose_transformer_v8  relation relation_v8 relation_depth
-model: relation_multimodal
+model: relation_multimodal # relation_pose_rgb relation_depth_rgb 
 use_prior: False
 
-mode: train # train/test/eval
+mode: train # train/test
 
 # Use pretrain model and the corresponding path
 pretrain: False
-pretrain_dir: F:\Multimodal\output\Simple_depth\09.24-23h23m35s\trained model\best_relation_epoch014_159.144165.pkl
-# F:\Multimodal\output\testDepth\09.14-00h25m32s\trained model\best_relation_epoch003_112.334091.pkl
-
-#\\105.1.1.104\d\BuzhenHuang_Programs\CrowdPeople\Regression\output\pose_transformer_v8_mix\01.03-14h21m23s\trained model\hmr_epoch310.pkl
+pretrain_dir: "/trained model/best_relation_epoch038_104.179420.pkl"
 
 # The name of your training loss function
-# Split different names with a single space
-# e.g., KL_Loss MPJPE L1 L2
-train_loss: SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss Plane_Loss  # SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss Joint_reg_Loss Skeleton_Loss Plane_Loss
-test_loss: MPJPE_H36M_instance #MPJPE_H36M_instance #MPJPE #MPJPE PCK PA_MPJPE MPJPE_H36M MPJPE_H36M_instance
+train_loss: SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss
+test_loss: MPJPE_H36M_instance # MPJPE 
 
 #visualize
 viz: False

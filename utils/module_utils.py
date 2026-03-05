@@ -10,6 +10,7 @@ import cv2
 import random
 import torch
 import os
+import json
 
 def viz_annot(dataset_dir, param, smpl):
     # visulize
@@ -172,3 +173,46 @@ def set_seed(seed):
     g.manual_seed(seed)
     return g
 
+
+def load_camera_para(file):
+    """"
+    load camera parameters
+    """
+    campose = []
+    intra = []
+    campose_ = []
+    intra_ = []
+    f = open(file,'r')
+    for line in f:
+        line = line.strip('\n')
+        line = line.rstrip()
+        words = line.split()
+        if len(words) == 3:
+            intra_.append([float(words[0]),float(words[1]),float(words[2])])
+        elif len(words) == 4:
+            campose_.append([float(words[0]),float(words[1]),float(words[2]),float(words[3])])
+        else:
+            pass
+
+    index = 0
+    intra_t = []
+    for i in intra_:
+        index+=1
+        intra_t.append(i)
+        if index == 3:
+            index = 0
+            intra.append(intra_t)
+            intra_t = []
+
+    index = 0
+    campose_t = []
+    for i in campose_:
+        index+=1
+        campose_t.append(i)
+        if index == 3:
+            index = 0
+            campose_t.append([0.,0.,0.,1.])
+            campose.append(campose_t)
+            campose_t = []
+
+    return np.array(campose), np.array(intra)

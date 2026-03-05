@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch
 import numpy as np
 from utils.geometry import batch_rodrigues
+import torch.nn.functional as F
 
 class L1(nn.Module):
     def __init__(self, device):
@@ -736,4 +737,3 @@ class PCK(nn.Module):
             pelvis = joints[pelvis_id, :]
 
         return joints - pelvis[:,None,:].repeat(1, 14, 1)
-

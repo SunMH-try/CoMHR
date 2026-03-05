@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from utils.imutils import cam_crop2full, vis_img
-from model.relation_image import relation_head
+from model.relation_head import relation_head
 from model.backbones.hrnet.cls_hrnet import HighResolutionNet
 from model.backbones.hrnet.hrnet_config import cfg
 from model.backbones.hrnet.hrnet_config import update_config

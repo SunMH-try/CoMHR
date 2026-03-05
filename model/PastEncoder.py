@@ -67,9 +67,9 @@ class PastEncoder(nn.Module):
                 nmp_layers=self.nmp_layers,
                 scale=args.hyper_scales[2]
             )
-        self.Tz_project = nn.Linear(1, self.model_dim)
+        self.tz_project = nn.Linear(257, 256)
+        self.tz_norm = nn.LayerNorm(256)
 
-    
     def add_category(self,x):
         B = x.shape[0]
         N = x.shape[1]
@@ -120,7 +120,6 @@ class PastEncoder(nn.Module):
                 ratio = ratioy
         
             im = self.convert_color(im*255)
-            # im = cv2.resize(im, dsize=None, fx=10, fy=10, interpolation=cv2.INTER_NEAREST)
             cv2.namedWindow('affinity',0)
             cv2.resizeWindow('affinity',int(im.shape[1]*ratio),int(im.shape[0]*ratio))
             cv2.imshow('affinity',im)
@@ -129,7 +128,6 @@ class PastEncoder(nn.Module):
         return viz
 
     def forward(self, inputs, features_inputs, Tz, batch_size, agent_num, mask):
-        # features_inputs 是额外投影后的特征
         features_inputs = self.features_project(features_inputs.view(batch_size*agent_num, -1))
         features_inputs = features_inputs.view(batch_size, agent_num, -1)
 
@@ -142,22 +140,19 @@ class PastEncoder(nn.Module):
         else:
             mask = mask        
 
-        # mask 应用在输入上
         inputs = inputs * mask[:, None]
         
-        # 原始输入 reshape
         ftraj_input = inputs.view(batch_size, agent_num, -1)
 
-        # --------- ✅ 在这里拼接 Tz ---------
         if Tz is not None:
-            Tz = Tz.view(batch_size, agent_num, 1)  # (B, N, 1)
-            Tz_feat = self.Tz_project(Tz)           # 映射到 256 维
-            ftraj_input = ftraj_input + Tz_feat     # 加上而不是拼接
-        # mask 转换成 pairwise 矩阵 (B, N, N)
+            Tz = Tz.view(batch_size, agent_num, 1)               
+            ftraj_input = torch.cat([ftraj_input, Tz], dim=-1)    
+            ftraj_input = F.relu(self.tz_project(ftraj_input))   
+            ftraj_input = self.tz_norm(ftraj_input)               
+
         mask = mask.view(batch_size, agent_num)
         mask = torch.matmul(mask[:, :, None], mask[:, None, :])
 
-        # 归一化后的相似度矩阵
         query_input = F.normalize(ftraj_input, p=2, dim=2)
         feat_corr = torch.matmul(query_input, query_input.permute(0, 2, 1))
 
@@ -168,7 +163,6 @@ class PastEncoder(nn.Module):
         # interaction
         ftraj_inter, _ = self.interaction(ftraj_input, mask)
 
-        # hypergraph 多尺度
         if len(self.args.hyper_scales) > 0:
             ftraj_inter_hyper, _ = self.interaction_hyper(features_inputs, feat_corr, mask, viz=False)
         if len(self.args.hyper_scales) > 1:
@@ -176,7 +170,7 @@ class PastEncoder(nn.Module):
         if len(self.args.hyper_scales) > 2:
             ftraj_inter_hyper3, _ = self.interaction_hyper3(features_inputs, feat_corr, mask)
 
-        # 融合多尺度结果
+
         if len(self.args.hyper_scales) == 0:
             final_feature = torch.cat((ftraj_input, ftraj_inter), dim=-1)
         elif len(self.args.hyper_scales) == 1:

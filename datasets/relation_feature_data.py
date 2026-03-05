@@ -36,10 +36,10 @@ class Relation_Feature_Data(base):
         self.joint_dataset = ['Panoptic', 'JTA']
 
         if self.is_train:
-            dataset_annot = os.path.join(self.dataset_dir, 'annot/final_train.pkl')
+            dataset_annot = os.path.join(self.dataset_dir, 'annot/new_train.pkl')
         else:
             self.eval = True
-            dataset_annot = os.path.join(self.dataset_dir,'annot/final_test.pkl')
+            dataset_annot = os.path.join(self.dataset_dir,'annot/new_test.pkl')
 
         params = self.load_pkl(dataset_annot)
         self.features, self.poses, self.shapes, self.imnames, self.masks, self.img_size, self.bboxs, self.intris, self.centers, self.scales, self.pose2ds, self.joints = [], [], [], [], [], [], [], [], [], [], [], []
@@ -47,8 +47,8 @@ class Relation_Feature_Data(base):
             if len(seq) < 1:
                 continue
             for i, frame in enumerate(seq):
-                if i > 10:
-                    break
+                # if i > 200:
+                #     continue
                 features, pose2ds, poses, shapes, bboxs, intris, centers, scales, joints = [], [], [], [], [], [], [], [], []
                 for key in frame.keys():
                     if key in ['img_path', 'h_w', 'depth_path', 'pose_path']:
@@ -98,7 +98,6 @@ class Relation_Feature_Data(base):
                     self.bboxs.append(bboxs)
                     self.intris.append(intris)
                     self.joints.append(joints)
-                
         del frame
         del params
 
@@ -163,7 +162,7 @@ class Relation_Feature_Data(base):
         img_h, img_w = self.img_size[index]
 
         num_people = len(self.features[index])
-        crop_size = 224 # 定义裁剪尺寸
+        crop_size = 224 
 
         bbox = np.zeros(self.max_people, dtype=np.float32)
         imgnames = ['empty'] * self.max_people
@@ -265,15 +264,9 @@ class Relation_Feature_Data(base):
             img_ws[idx] = img_w
             focal_lengthes[idx] = focal_length
 
-            # 获取当前人的bbox，bbox格式 [xmin, ymin, xmax, ymax]
+        
             bbox = self.bboxs[index][idx]
             xmin, ymin, xmax, ymax = bbox
-
-            # 获取当前人的bbox，bbox格式 [xmin, ymin, xmax, ymax]
-            bbox = self.bboxs[index][idx]
-            xmin, ymin, xmax, ymax = bbox
-
-            # 强制转为整数并确保在图像范围内
             xmin = int(max(0, xmin))
             ymin = int(max(0, ymin))
             xmax = int(min(img_w, xmax))

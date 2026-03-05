@@ -159,24 +159,6 @@ class Relation_Img_Data(Relation_Feature_Data):
         load_data["img_w"] = img_ws
         load_data["focal_length"] = focal_lengthes
 
-        # try:
-        #     origin_img = cv2.imread(imgname)
-        #     img = origin_img[:,:,::-1].copy().astype(np.float32)
-        # except TypeError:
-        #     print(imgname)
-
-        # # self.vis_img('img', origin_img)
-        # for center, scale, valid in zip(load_data["center"].detach().numpy(), load_data["scale"].detach().numpy(), load_data['valid']):
-        #     if valid == 1:
-        #     # Process image
-        #         img = origin_img[:,:,::-1].copy().astype(np.float32)
-        #         img, crop_ul, crop_br, new_shape, new_x, new_y, old_x, old_y = self.rgb_processing(img, center, sc*scale, rot, flip, pn)
-        #         img = torch.from_numpy(img).float()
-        #         origin_img = img_crop2origin(img.clone(), origin_img.copy(), new_shape, new_x, new_y, old_x, old_y)
-        #         # self.vis_img('img', origin_img)
-
-        # self.vis_input(origin_img, load_data['pred_keypoints'], load_data['keypoints'], load_data['pose'], load_data['betas'], load_data['gt_cam_t'], load_data['valid'], load_data["new_shape"].detach().numpy(), load_data["new_x"].detach().numpy(), load_data["new_y"].detach().numpy(), load_data["old_x"].detach().numpy(), load_data["old_y"].detach().numpy(), focal_length, img_h, img_w)
-
         return load_data
 
     def __getitem__(self, index):
@@ -185,17 +167,3 @@ class Relation_Img_Data(Relation_Feature_Data):
 
     def __len__(self):
         return self.len
-
-
-
-
-
-
-
-
-
-
-
-
-
-

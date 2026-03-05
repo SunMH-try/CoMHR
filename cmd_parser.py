@@ -103,12 +103,6 @@ def parse_config(argv=None):
                         default=0,
                         type=int,
                         help='gpu index.')
-    
-    #需要删除
-    parser.add_argument('--h36m_depth_folder',
-                        default='',
-                        type=str,
-                        help='The directory that contains Human3.6M depth data.')
 
     args = parser.parse_args()
     args_dict = vars(args)

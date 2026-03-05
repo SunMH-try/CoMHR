@@ -1,10 +1,3 @@
-'''
- @FileName    : modules.py
- @EditTime    : 2022-09-27 14:45:21
- @Author      : Buzhen Huang
- @Email       : hbz@seu.edu.cn
- @Description : 
-'''
 import os
 import sys
 import torch
@@ -20,7 +13,8 @@ from loss_func import *
 import torch.optim as optim
 from utils.cyclic_scheduler import CyclicLRWithRestarts
 from utils.smpl_torch_batch import SMPLModel
-from utils.renderer_pyrd import Renderer
+from utils.renderer_moderngl import Renderer
+#from utils.renderer_pyrd import Renderer
 import cv2
 from thop import profile
 from copy import deepcopy
@@ -63,8 +57,6 @@ def init(note='occlusion', dtype=torch.float32, mode='eval', **kwargs):
 
     return out_dir, logger, model_smpl
 
-
-
 class LossLoader():
     def __init__(self, train_loss='L1', test_loss='L1', device=torch.device('cpu'), **kwargs):
         self.train_loss_type = train_loss.split(' ')
@@ -100,6 +92,7 @@ class LossLoader():
                 self.train_loss.update(Joint_reg_Loss=Joint_reg_Loss(self.device))
             if loss == 'Plane_Loss':
                 self.train_loss.update(Plane_Loss=Plane_Loss(self.device))
+
             # You can define your loss function in loss_func.py, e.g., Smooth6D, 
             # and load the loss by adding the following lines
 
@@ -172,23 +165,29 @@ class LossLoader():
             elif ltype == 'Joint_reg_Loss':
                 Joint_reg_Loss = self.train_loss['Joint_reg_Loss'](pred['transformer_joints'], gt['gt_joints'], gt['has_3d'])
                 loss_dict = {**loss_dict, **Joint_reg_Loss}
+            elif ltype == 'Depth_Order_Loss':
+                Depth_Order_Loss = self.train_loss['Depth_Order_Loss'](
+                    pred['pred_joints'],
+                    gt['gt_joints'],
+                    gt['imgname']  # Pass imgname list/tensor here
+                )
+                loss_dict['Depth_Order_Loss'] = Depth_Order_Loss
             else:
                 pass
 
-        # ===== 在这里加 Contrastive Loss =====
+        # Add Contrastive Loss
         if 'loss_contrastive' in pred and pred['loss_contrastive'] is not None:
-            lambda_contrast = 0.1  # 权重
+            lambda_contrast = 0.1  # Weight
             loss_dict['Contrastive'] = pred['loss_contrastive'] * lambda_contrast
 
-        # ===== 合并所有 loss =====
+        # Merge all losses
         loss = 0
         for k in loss_dict:
-            loss_temp = loss_dict[k] * 60.   # 保持和原逻辑一致
+            loss_temp = loss_dict[k] * 60.   # Maintain original logic weighting
             loss += loss_temp
             loss_dict[k] = round(float(loss_temp.detach().cpu().numpy()), 6)
 
         return loss, loss_dict
-
 
     def calcul_testloss(self, pred, gt):
         loss_dict = {}
@@ -236,9 +235,7 @@ class LossLoader():
 
         return loss_dict
 
-
 def get_model_info(model, tsize):
-
     stride = 64
     img = torch.zeros((1, 3, stride, stride), device=next(model.parameters()).device)
     data = {'features':torch.zeros((1,8,2048), device=next(model.parameters()).device),
@@ -258,7 +255,6 @@ def get_model_info(model, tsize):
 
 class ModelLoader():
     def __init__(self, dtype=torch.float32, output='', device=torch.device('cpu'), model=None, lr=0.001, pretrain=False, pretrain_dir='', batchsize=32, task=None, data_folder='', use_prior=False, testset='', test_loss='MPJPE', **kwargs):
-
         self.output = output
         self.device = device
         self.batchsize = batchsize
@@ -296,7 +292,6 @@ class ModelLoader():
                 model_params += parameter.numel()
         print('INFO: Model parameter count: %.2fM' % (model_params / 1e6))
 
-
         if torch.cuda.is_available():
             self.model.to(self.device)
             print("device: cuda")
@@ -317,10 +312,9 @@ class ModelLoader():
             model_dict.update(premodel_dict)
             self.model.load_state_dict(model_dict)
             print("Load pretrain parameters from %s" %pretrain_dir)
-            self.optimizer.load_state_dict(params['optimizer'])
-            print("Load optimizer parameters")
+            # self.optimizer.load_state_dict(params['optimizer'])
+            # print("Load optimizer parameters")
             
-
         if task == 'relation' and use_prior:
             model_dict = self.model.state_dict()
             params = torch.load('pretrain_model/mix_hmr300.pkl')
@@ -431,7 +425,7 @@ class ModelLoader():
             img_h, img_w = img.shape[:2]
             renderer = Renderer(focal_length=focal, center=(img_w/2, img_h/2), img_w=img.shape[1], img_h=img.shape[0],
                                 faces=self.model_smpl_gpu.faces,
-                                same_mesh_color=True)
+                                same_mesh_color=False)
 
             pred_smpl = renderer.render_front_view(pred_verts[np.newaxis,:,:],
                                                     bg_img_rgb=img.copy())
@@ -451,44 +445,8 @@ class ModelLoader():
             # mesh_name = os.path.join(output, 'meshes/%s_%02d_gt_mesh.obj' %(name, iter * batchsize + index))
             # self.model_smpl_gpu.write_obj(gt_verts, mesh_name)
             renderer.delete()
-            # vis_img('pred_smpl', pred_smpl)
-            # vis_img('gt_smpl', gt_smpl)
 
-    # def save_results(self, results, iter, batchsize, extra=200):
-    
-    #     output = os.path.join(self.output, 'images')
-    #     if not os.path.exists(output):
-    #         os.makedirs(output)
-
-    #     results['pred_verts'] = results['pred_verts'] + results['pred_trans'][:, np.newaxis, :]
-    #     results['gt_verts'] = results['gt_verts'] + results['gt_trans'][:, np.newaxis, :]
-
-    #     total_to_save = batchsize + extra  # 每次保存的数量
-    #     for index, (img, pred_verts, gt_verts, focal) in enumerate(
-    #         zip(results['imgs'], results['pred_verts'], results['gt_verts'], results['focal_length'])
-    #     ):
-    #         if index >= total_to_save:
-    #             break
-
-    #         name = img.replace(self.data_folder + '\\', '').replace('\\', '_').replace('/', '_')
-    #         img = cv2.imread(img)
-    #         img_h, img_w = img.shape[:2]
-    #         renderer = Renderer(focal_length=focal, center=(img_w/2, img_h/2),
-    #                             img_w=img.shape[1], img_h=img.shape[0],
-    #                             faces=self.model_smpl_gpu.faces,
-    #                             same_mesh_color=True)
-
-    #         pred_smpl = renderer.render_front_view(pred_verts[np.newaxis,:,:],
-    #                                             bg_img_rgb=img.copy())
-
-    #         render_name = "%s_%02d_pred_smpl.jpg" % (name, iter * batchsize + index)
-    #         cv2.imwrite(os.path.join(output, render_name), pred_smpl)
-
-    #         mesh_name = os.path.join(output, 'meshes/%s_%02d_pred_mesh.obj' % (name, iter * batchsize + index))
-    #         self.model_smpl_gpu.write_obj(pred_verts, mesh_name)
-
-    #         renderer.delete()
-
+    # Standard version
     def save_test_results(self, results, iter, batchsize):
         output = os.path.join(self.output, 'images')
         if not os.path.exists(output):
@@ -520,48 +478,6 @@ class ModelLoader():
 
         valid = valid.reshape(b, n)
 
-        # for index, (img, pred_vert, gt_vert, f, v) in enumerate(zip(results['imgs'][0], pred_verts, gt_verts, focal, valid)):
-        #     # print(img)
-        #     if platform.system() == 'Windows':
-        #         name = img.replace(self.data_folder + '\\', '').replace('\\', '_').replace('/', '_')
-        #     else:
-        #         name = img.replace(self.data_folder + '/', '').replace('\\', '_').replace('/', '_')
-            
-        #     img = cv2.imread(img)
-        #     img_h, img_w = img.shape[:2]
-        #     renderer = Renderer(focal_length=f[0], center=(img_w/2, img_h/2), img_w=img.shape[1], img_h=img.shape[0], faces=self.model_smpl_gpu.faces, same_mesh_color=False)
-
-        #     pred_vert = pred_vert[v==1]
-        #     gt_vert = gt_vert[v==1]
-
-        #     pred_smpl = renderer.render_front_view(pred_vert, bg_img_rgb=img.copy())
-
-        #     side_smpl = renderer.render_side_view(pred_vert)
-
-        #     gt_smpl = renderer.render_front_view(gt_vert, bg_img_rgb=img.copy())
-
-        #     gt_side_smpl = renderer.render_side_view(gt_vert)
-
-        #     background = np.zeros_like(img)
-
-        #     pred_smpl = np.concatenate((pred_smpl, side_smpl), axis=1)
-        #     background = np.concatenate((gt_smpl, gt_side_smpl), axis=1)
-        #     pred_smpl = np.concatenate((pred_smpl, background), axis=0)
-
-        #     render_name = "%s_%02d_pred_smpl.jpg" % (name, iter * batchsize + index)
-        #     cv2.imwrite(os.path.join(output, render_name), pred_smpl)
-
-        #     # render_name = "%s_%02d_gt_smpl.jpg" % (name, iter * batchsize + index)
-        #     # cv2.imwrite(os.path.join(output, render_name), gt_smpl)
-
-        #     # mesh_name = os.path.join(output, 'meshes/%s_%02d_pred_mesh.obj' %(name, iter * batchsize + index))
-        #     # self.model_smpl_gpu.write_obj(pred_verts, mesh_name)
-
-        #     # mesh_name = os.path.join(output, 'meshes/%s_%02d_gt_mesh.obj' %(name, iter * batchsize + index))
-        #     # self.model_smpl_gpu.write_obj(gt_verts, mesh_name)
-        #     renderer.delete()
-        #     # vis_img('pred_smpl', pred_smpl)
-        #     # vis_img('gt_smpl', gt_smpl)
         for index, (img, pred_vert, gt_vert, f, v) in enumerate(zip(results['imgs'][0], pred_verts, gt_verts, focal, valid)):
             if platform.system() == 'Windows':
                 name = img.replace(self.data_folder + '\\', '').replace('\\', '_').replace('/', '_')
@@ -583,10 +499,10 @@ class ModelLoader():
             pred_vert = pred_vert[v==1]
             gt_vert   = gt_vert[v==1]
 
-           # 白色背景
+            # White background
             white_bg = np.ones_like(img, dtype=np.uint8) * 255
 
-            # 渲染三视图
+            # Render three views
             pred_front = renderer.render_front_view(pred_vert, bg_img_rgb=img.copy())
             pred_side  = renderer.render_side_view(pred_vert, bg_img_rgb=white_bg)
             pred_top   = renderer.render_top_view(pred_vert, bg_img_rgb=white_bg)
@@ -595,17 +511,224 @@ class ModelLoader():
             gt_side  = renderer.render_side_view(gt_vert, bg_img_rgb=white_bg)
             gt_top   = renderer.render_top_view(gt_vert, bg_img_rgb=white_bg)
 
-            # 拼接视图：横向拼三个 pred，三个 gt，再上下拼
+            # Concatenate views: horizontal (3 pred, 3 gt), then vertical
             pred_row = np.concatenate((pred_front, pred_side, pred_top), axis=1)
             gt_row   = np.concatenate((gt_front, gt_side, gt_top), axis=1)
             final_img = np.concatenate((pred_row, gt_row), axis=0)
 
-            # 保存
+            # Save results
             render_name = "%s_%02d_views.jpg" % (name, iter * batchsize + index)
             cv2.imwrite(os.path.join(output, render_name), final_img)
 
             renderer.delete()
 
+
+    # Multi-person Giga rendering (Commented out for reference)
+    # def save_test_results(self, results, iter, batchsize):
+    #     output = os.path.join(self.output, 'images')
+    #     os.makedirs(output, exist_ok=True)
+
+    #     results['pred_verts'] = results['pred_verts'] + results['pred_trans'][:, np.newaxis, :]
+    #     results['gt_verts'] = results['gt_verts'] + results['gt_trans'][:, np.newaxis, :]
+
+    #     b, n = results['valid'].shape
+    #     valid = results['valid'].reshape(-1,)
+
+    #     pred_verts = np.zeros((b * n, 6890, 3), dtype=np.float32)
+    #     gt_verts = np.zeros((b * n, 6890, 3), dtype=np.float32)
+    #     focal = np.zeros((b * n,), dtype=np.float32)
+
+    #     pred_verts[valid == 1] = results['pred_verts']
+    #     gt_verts[valid == 1] = results['gt_verts']
+    #     focal[valid == 1] = results['focal_length']
+
+    #     pred_verts = pred_verts.reshape(b, n, 6890, 3)
+    #     gt_verts = gt_verts.reshape(b, n, 6890, 3)
+    #     focal = focal.reshape(b, n)
+    #     valid = valid.reshape(b, n)
+
+    #     # Ensure cache dictionary exists
+    #     if not hasattr(self, 'person_cache'):
+    #         self.person_cache = {}
+
+    #     # Process per image in the batch
+    #     for idx in range(b):
+    #         img_path = results['imgs'][0][idx]
+            
+    #         # Prepare filename
+    #         if platform.system() == 'Windows':
+    #             name = img_path.replace(self.data_folder + '\\', '').replace('\\', '_').replace('/', '_')
+    #         else:
+    #             name = img_path.replace(self.data_folder + '/', '').replace('\\', '_').replace('/', '_')
+
+    #         # Cache key - use original image path
+    #         cache_key = img_path
+
+    #         # Collect valid persons in the current batch
+    #         valid_mask = valid[idx] == 1
+    #         current_pred_verts = list(pred_verts[idx][valid_mask])
+    #         current_gt_verts = list(gt_verts[idx][valid_mask])
+    #         current_focal = focal[idx][0]
+
+    #         # Add to cache if valid persons exist
+    #         if len(current_pred_verts) > 0:
+    #             if cache_key not in self.person_cache:
+    #                 self.person_cache[cache_key] = {
+    #                     'pred_verts': [],
+    #                     'gt_verts': [],
+    #                     'focal': current_focal,
+    #                     'img_path': img_path,
+    #                     'name': name
+    #                 }
+                
+    #             self.person_cache[cache_key]['pred_verts'].extend(current_pred_verts)
+    #             self.person_cache[cache_key]['gt_verts'].extend(current_gt_verts)
+                
+    #             # Update focal length (use the latest)
+    #             self.person_cache[cache_key]['focal'] = current_focal
+
+    #     # Avoid redundant rendering for the same image in the current batch
+    #     rendered_this_batch = set()
+        
+    #     for idx in range(b):
+    #         img_path = results['imgs'][0][idx]
+            
+    #         if img_path in rendered_this_batch:
+    #             continue
+                
+    #         if img_path in self.person_cache:
+    #             data = self.person_cache[img_path]
+                
+    #             # Render only when enough persons are collected
+    #             if len(data['pred_verts']) >= 8:  # Adjust threshold as needed
+    #                 # Read original image
+    #                 img = cv2.imread(data['img_path'])
+    #                 if img is None:
+    #                     continue
+                        
+    #                 img_h, img_w = img.shape[:2]
+
+    #                 # Create renderer
+    #                 renderer = Renderer(
+    #                     focal_length=data['focal'],
+    #                     center=(img_w / 2, img_h / 2),
+    #                     img_w=img_w,
+    #                     img_h=img_h,
+    #                     faces=self.model_smpl_gpu.faces,
+    #                     same_mesh_color=True
+    #                 )
+
+    #                 # Convert to numpy array
+    #                 pred_vert_batch = np.array(data['pred_verts'])
+    #                 gt_vert_batch = np.array(data['gt_verts'])
+                  
+    #                 # White background
+    #                 white_bg = np.ones_like(img, dtype=np.uint8) * 255
+
+    #                 # Render predicted top view
+    #                 pred_top = renderer.render_top_view(pred_vert_batch, bg_img_rgb=white_bg)
+
+    #                 # Render GT top view
+    #                 gt_top = renderer.render_top_view(gt_vert_batch, bg_img_rgb=white_bg)
+
+    #                 # Concatenate vertically: top pred, bottom GT
+    #                 final_img = np.concatenate((pred_top, gt_top), axis=0)
+
+    #                 # # White background
+    #                 # white_bg = np.ones_like(img, dtype=np.uint8) * 255
+
+    #                 # # Render predicted results
+    #                 # pred_front = renderer.render_front_view(pred_vert_batch, bg_img_rgb=img.copy())
+    #                 # pred_side = renderer.render_side_view(pred_vert_batch, bg_img_rgb=white_bg)
+    #                 # pred_top = renderer.render_top_view(pred_vert_batch, bg_img_rgb=white_bg)
+
+    #                 # # Render GT results
+    #                 # gt_front = renderer.render_front_view(gt_vert_batch, bg_img_rgb=img.copy())
+    #                 # gt_side = renderer.render_side_view(gt_vert_batch, bg_img_rgb=white_bg)
+    #                 # gt_top = renderer.render_top_view(gt_vert_batch, bg_img_rgb=white_bg)
+
+    #                 # # Concatenate results
+    #                 # pred_row = np.concatenate((pred_front, pred_side, pred_top), axis=1)
+    #                 # gt_row = np.concatenate((gt_front, gt_side, gt_top), axis=1)
+    #                 # final_img = np.concatenate((pred_row, gt_row), axis=0)
+
+    #                 # Save results
+    #                 render_name = f"{data['name']}_iter{iter}_persons{len(data['pred_verts'])}_views.jpg"
+    #                 cv2.imwrite(os.path.join(output, render_name), final_img)
+
+    #                 renderer.delete()
+    #                 print(f"Rendered image {data['name']}, containing {len(data['pred_verts'])} persons")
+                    
+    #                 # Mark as rendered to prevent duplicates in batch
+    #                 rendered_this_batch.add(img_path)
+                    
+    #                 # Do not clear cache; accumulate until the test finishes
+
+    def finalize_test_results(self, iter):
+        output = os.path.join(self.output, 'images')
+        os.makedirs(output, exist_ok=True)
+        
+        if not hasattr(self, 'person_cache') or len(self.person_cache) == 0:
+            return
+        
+        for cache_key, data in self.person_cache.items():
+            # Read original image
+            img = cv2.imread(data['img_path'])
+            if img is None:
+                continue
+                
+            img_h, img_w = img.shape[:2]
+
+            # Create renderer
+            renderer = Renderer(
+                focal_length=data['focal'],
+                center=(img_w / 2, img_h / 2),
+                img_w=img_w,
+                img_h=img_h,
+                faces=self.model_smpl_gpu.faces,
+                same_mesh_color=True
+            )
+
+            # Convert to numpy array
+            pred_vert_batch = np.array(data['pred_verts'])
+            gt_vert_batch = np.array(data['gt_verts'])
+            # White background
+            white_bg = np.ones_like(img, dtype=np.uint8) * 255
+
+            # Render top view only
+            pred_top = renderer.render_top_view(pred_vert_batch, bg_img_rgb=white_bg)
+            gt_top = renderer.render_top_view(gt_vert_batch, bg_img_rgb=white_bg)
+
+            # Concatenate vertically: top pred, bottom GT
+            final_img = np.concatenate((pred_top, gt_top), axis=0)
+
+            # # White background
+            white_bg = np.ones_like(img, dtype=np.uint8) * 255
+
+            # # Render predicted results
+            pred_front = renderer.render_front_view(pred_vert_batch, bg_img_rgb=img.copy())
+            pred_side = renderer.render_side_view(pred_vert_batch, bg_img_rgb=white_bg)
+            pred_top = renderer.render_top_view(pred_vert_batch, bg_img_rgb=white_bg)
+
+            # # Render GT results
+            gt_front = renderer.render_front_view(gt_vert_batch, bg_img_rgb=img.copy())
+            gt_side = renderer.render_side_view(gt_vert_batch, bg_img_rgb=white_bg)
+            gt_top = renderer.render_top_view(gt_vert_batch, bg_img_rgb=white_bg)
+
+            # # Concatenate results
+            pred_row = np.concatenate((pred_front, pred_side, pred_top), axis=1)
+            gt_row = np.concatenate((gt_front, gt_side, gt_top), axis=1)
+            final_img = np.concatenate((pred_row, gt_row), axis=0)
+
+            # Save final result
+            render_name = f"{data['name']}_final_persons{len(data['pred_verts'])}_views.jpg"
+            cv2.imwrite(os.path.join(output, render_name), final_img)
+
+            renderer.delete()
+            print(f"Final rendered image {data['name']}, containing {len(data['pred_verts'])} persons")
+        
+        # Clear cache
+        self.person_cache = {}
 
     def save_joint_results(self, results, iter, batchsize):
         output = os.path.join(self.output, 'images')
@@ -747,7 +870,7 @@ class ModelLoader():
 
         renderer = Renderer(focal_length=focal, center=(img_w/2, img_h/2), img_w=img.shape[1], img_h=img.shape[0],
                             faces=self.model_smpl_gpu.faces,
-                            same_mesh_color=True)
+                            same_mesh_color=False)
 
         pred_smpl = renderer.render_front_view(pred_verts, bg_img_rgb=img.copy())
 
@@ -765,7 +888,7 @@ class ModelLoader():
         # vis_img('gt_smpl', gt_smpl)
 
 class DatasetLoader():
-    def __init__(self, trainset=None, testset=None, data_folder='./data', dtype=torch.float32, smpl=None, task=None, model='hmr', **kwargs):
+    def __init__(self, trainset=None, testset=None, data_folder='./data', dtype=torch.float32, smpl=None, task=None, model='hmr',**kwargs):
         self.data_folder = data_folder
         self.trainset = trainset.split(' ')
         self.testset = testset.split(' ')
@@ -781,15 +904,16 @@ class DatasetLoader():
     #         dataset = Relation_Img_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
     #         train_dataset.append(dataset)
 
-    #     # 使用 ConcatDataset 合并所有的数据集
+    #     # Merge datasets using ConcatDataset
     #     train_dataset = torch.utils.data.ConcatDataset(train_dataset)
     #     return train_dataset
 
     def load_trainset(self):
         train_dataset = []
         for i in range(len(self.trainset)):
-            # dataset=Relation_Feature_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
+            #dataset=Relation_Feature_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
             dataset = Relation_Pose_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
+            #dataset=Relation_Depth_Data(True, self.dtype, self.data_folder, self.trainset[i], self.smpl)
             train_dataset.append(dataset)
 
         train_dataset = torch.utils.data.ConcatDataset(train_dataset)
@@ -800,8 +924,9 @@ class DatasetLoader():
         test_dataset = []
         for i in range(len(self.testset)):
             if self.task == 'relation':
-                # test_dataset.append(Relation_Feature_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
+                #test_dataset.append(Relation_Feature_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
                 test_dataset.append(Relation_Pose_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
+                #test_dataset.append(Relation_Depth_Data(False, self.dtype, self.data_folder, self.testset[i], self.smpl))
 
         test_dataset = torch.utils.data.ConcatDataset(test_dataset)
         return test_dataset

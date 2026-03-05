@@ -15,8 +15,16 @@ class SMPLModel(Module):
         self.simplify = simplify
         params = self.load_pkl(model_path)
         # print(params['J_regressor'].nonzero())
-        self.J_regressor = torch.from_numpy(np.array(params['J_regressor'].todense())).to(dtype=self.data_type, device=self.device)
-        self.J_halpe_regressor = torch.from_numpy(np.load('data/J_regressor_halpe.npy')).to(dtype=self.data_type, device=self.device)
+        self.J_regressor = (
+            torch.from_numpy(np.array(params['J_regressor'].todense()))
+            .to(dtype=self.data_type)
+            .to(self.device)
+        )
+        # self.J_regressor = torch.from_numpy(np.array(params['J_regressor'].todense())).to(dtype=self.data_type, device=self.device)
+        # self.J_halpe_regressor = torch.from_numpy(np.load('data/J_regressor_halpe.npy')).to(dtype=self.data_type, device=self.device)
+        self.J_halpe_regressor = torch.from_numpy(
+        np.load('data/J_regressor_halpe.npy')
+        ).to(device=self.device, dtype=self.data_type)
         self.weights = torch.from_numpy(params['weights']).to(dtype=self.data_type, device=self.device)
         self.posedirs = torch.from_numpy(params['posedirs']).to(dtype=self.data_type, device=self.device)
         self.v_template = torch.from_numpy(params['v_template']).to(dtype=self.data_type, device=self.device)

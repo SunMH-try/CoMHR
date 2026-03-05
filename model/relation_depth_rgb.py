@@ -16,50 +16,6 @@ args = namedtuple('args', [
 ])
 
 class relation_depth_rgb(nn.Module):
-    def compute_mpjpe_matrix(self, gt_pose):
-        N = gt_pose.shape[0]
-        if gt_pose.shape[1] == 72:
-            gt_pose = gt_pose.view(N, 24, 3)
-        diff = gt_pose.unsqueeze(1) - gt_pose.unsqueeze(0)
-        mpjpe_matrix = diff.norm(dim=-1).mean(dim=-1)
-        return mpjpe_matrix
-
-    def contrastive_loss_intra(self, features, mpjpe_matrix, thresh=40.0, temperature=0.1):
-        sim_matrix = F.cosine_similarity(features.unsqueeze(1), features.unsqueeze(0), dim=-1)
-        pos_mask = (mpjpe_matrix < thresh).float()
-        exp_sim = torch.exp(sim_matrix / temperature)
-        pos_loss = -torch.log((exp_sim * pos_mask).sum(dim=1) / (exp_sim.sum(dim=1) + 1e-8))
-        return pos_loss.mean()
-    
-    def contrastive_loss_cross(self, relation_rgb, relation_depth):
-        # 只有 RGB 和 Depth
-        loss = (relation_rgb - relation_depth).pow(2).sum(dim=1)
-        return loss.mean()
-
-    def compute_contrastive_loss(self, relation_rgb, relation_depth, gt_pose, thresh=40.0):
-        mpjpe_matrix = self.compute_mpjpe_matrix(gt_pose)
-        loss_rgb   = self.contrastive_loss_intra(relation_rgb, mpjpe_matrix, thresh)
-        loss_depth = self.contrastive_loss_intra(relation_depth, mpjpe_matrix, thresh)
-        loss_cross = self.contrastive_loss_cross(relation_rgb, relation_depth)
-        total_loss = loss_rgb + loss_depth + loss_cross
-        return total_loss
-    
-    # def contrastive_loss_cross(self, relation_rgb, relation_depth, relation_pose):
-    #     loss = ((relation_rgb - relation_depth).pow(2).sum(dim=1) +
-    #             (relation_rgb - relation_pose).pow(2).sum(dim=1) +
-    #             (relation_depth - relation_pose).pow(2).sum(dim=1)) / 3.0
-    #     return loss.mean()
-
-    # def compute_contrastive_loss(self, relation_rgb, relation_depth, relation_pose, gt_pose, thresh=40.0):
-    #     mpjpe_matrix = self.compute_mpjpe_matrix(gt_pose)
-    #     loss_rgb   = self.contrastive_loss_intra(relation_rgb, mpjpe_matrix, thresh)
-    #     loss_depth = self.contrastive_loss_intra(relation_depth, mpjpe_matrix, thresh)
-    #     loss_pose  = self.contrastive_loss_intra(relation_pose, mpjpe_matrix, thresh)
-    #     loss_cross = self.contrastive_loss_cross(relation_rgb, relation_depth, relation_pose)
-    #     total_loss = loss_rgb + loss_depth + loss_pose + loss_cross
-    #     return total_loss
-    
-    
     def __init__(self, smpl, num_joints=21):
         super().__init__()
         self.smpl = smpl
@@ -70,8 +26,6 @@ class relation_depth_rgb(nn.Module):
         
         self.past_encoder_rgb   = PastEncoder_depth_rgb(self.args)
         self.past_encoder_depth = PastEncoder_depth_rgb(self.args)
-
-
 
         embed_dim = 4096 
         out_dim = 24 * 6
@@ -108,14 +62,13 @@ class relation_depth_rgb(nn.Module):
         self.to(device)
     
     def forward(self, data, return_contrastive=True):
-        # --------------------- 基本特征 ---------------------
         valid = data['valid'].reshape(-1,)
-        mask = valid == 1  # 有效 agent mask
+        mask = valid == 1  
         features = data['features']
         batch_size, agent_num, d = features.shape
         features = features.reshape(-1, d)
 
-        # depth 特征
+        # depth 
         depth = data['depth']
         if depth.ndim == 4:
             B, P, H, W = depth.shape
@@ -124,7 +77,7 @@ class relation_depth_rgb(nn.Module):
         depth_feat = self.depth_encoder(depth)
         depth_feat = self.depth_fc(depth_feat)
 
-        # RGB + depth 投影
+        # RGB + depth 
         features_concat = torch.cat([features, depth_feat], dim=1)
 
         # bbox info
@@ -141,15 +94,13 @@ class relation_depth_rgb(nn.Module):
         aff_features = torch.cat([features_concat, bbox_info], dim=1)
         inputs = self.project(aff_features)
 
-        # 投影
         rgb_features = self.project_rgb(features)
         depth_features = self.project_depth(depth_feat)
 
-        # PastEncoder 两模态
+        # PastEncoder
         relation_rgb = self.past_encoder_rgb(inputs, rgb_features, batch_size, agent_num, valid)
         relation_depth = self.past_encoder_depth(inputs, depth_features, batch_size, agent_num, valid)
 
-        # --------------------- 提取有效 agent ---------------------
         features_valid = features_concat[mask]
         relation_rgb_valid = relation_rgb[mask]
         relation_depth_valid = relation_depth[mask]
@@ -160,7 +111,6 @@ class relation_depth_rgb(nn.Module):
         img_w_valid = img_w[mask]
         focal_length_valid = focal_length[mask]
 
-        # 融合 relation 特征
         relation_features = torch.cat([relation_rgb_valid, relation_depth_valid], dim=1)
         feature = torch.cat([features_valid, relation_features], dim=1)
         num_valid = feature.shape[0]
@@ -202,31 +152,4 @@ class relation_depth_rgb(nn.Module):
             'focal_length': focal_length_valid,
             'pred_keypoints_2d': pred_keypoints_2d,
         }
-
-        # ---------------- contrastive loss ----------------
-        gt_joints = data['gt_joints']  # shape = [batch_size, actual_agent_num, joint_num, dim] 或 [num_agents, joint_num, dim]
-
-        gt_joints_xyz = gt_joints[..., :3]  # shape = [num_agents, joint_num, 3]
-        mask_valid = valid.bool()  # 对所有 features 的有效 agent mask
-        
-        # 用同一个 mask 筛选 features
-        relation_rgb_valid = relation_rgb[mask_valid]      # shape = [num_valid, feature_dim]
-        relation_depth_valid = relation_depth[mask_valid]  # shape = [num_valid, feature_dim].
-        
-        # contrastive loss 只在至少两个 agent 时计算
-        if gt_joints_xyz.shape[0] > 1:
-            mpjpe_matrix = self.compute_mpjpe_matrix(gt_joints_xyz)
-            loss_rgb = self.contrastive_loss_intra(relation_rgb_valid, mpjpe_matrix)
-            loss_depth = self.contrastive_loss_intra(relation_depth_valid, mpjpe_matrix)
-        else:
-            loss_rgb = torch.tensor(0., device=relation_rgb_valid.device)
-            loss_depth = torch.tensor(0., device=relation_depth_valid.device)
-
-        # cross-modal loss
-        loss_cross = ((relation_rgb_valid - relation_depth_valid).pow(2).sum(dim=1)).mean()
-
-        # 总 contrastive loss
-        loss_contrastive = loss_rgb + loss_depth + loss_cross
-        pred['loss_contrastive'] = loss_contrastive
-
         return pred

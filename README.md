@@ -33,14 +33,9 @@ Download datasets and place them in `data/datasets`. The following datasets are 
 | CrowdPose | Visualization |
 
 **Step 4:**<br>
-Run training.
+Set `mode: train` or `mode: test` in `cfg_files/config.yaml`, then run:
 ```bash
-python main.py --config cfg_files/config.yaml --mode train
-```
-
-Run testing.
-```bash
-python main.py --config cfg_files/config.yaml --mode test
+python main.py --config cfg_files/config.yaml
 ```
 
 ## Configuration

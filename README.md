@@ -1,7 +1,6 @@
 # CoMHR: Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery
 
 The official code for the paper "Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery".<br>
-[Buzhen Huang](http://www.buzhenhuang.com/)<br>
 \[[Paper](#)\]
 
 ![figure](/assets/pipeline.png)
@@ -89,11 +88,11 @@ To address severe occlusions and depth ambiguity in dense crowds, we propose Con
 ## Citation
 If you find this code useful for your research, please consider citing the paper.
 ```bibtex
-@inproceedings{sun2026comhr,
+@inproceedings{comhr,
   title={Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery},
   author={},
-  booktitle={Anonymous ICME submission},
-  year={2026},
+  booktitle={},
+  year={},
 }
 ```
 

@@ -71,7 +71,7 @@ To address severe occlusions and depth ambiguity in dense crowds, we propose Con
 
 - **Multi-Modal Node Initialization**: Augments RGB features with pseudo-depth maps and occlusion-aware 3D poses. We introduce a *Pelvis Depth Indicator* as a global spatial anchor to explicitly enforce front-back ordering.
 - **Contrastive Hypergraph Construction**: Dynamically constructs a shared-topology hypergraph derived from holistic aggregated features rather than relying on predefined topologies.
-- **Hypergraph Contrastive Learning**: A dual-branch strategy that enhances intra-modal discriminability (clustering individuals with similar actions) and enforces cross-modal orthogonality to maximize feature complementarity.
+- **Hypergraph Contrastive Learning**: A dual-branch strategy that enhances intra-modal discriminability (clustering individuals with similar actions) and enforces cross-modal consistency to maximize feature complementarity.
 - **High-Order Reasoning**: Mitigates single-modal fragility by utilizing collective neighbor cues to infer missing information for occluded subjects across the shared topology.
 
 ## TODOS

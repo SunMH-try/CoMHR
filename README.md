@@ -26,11 +26,11 @@ Download datasets and place them in `data/datasets`. The following datasets are 
 
 | Dataset | Usage |
 |---------|-------|
-| [MPII](http://human-pose.mpi-inf.mpg.de/) | Training |
-| [COCO](https://cocodataset.org/) | Training |
-| [Panoptic](http://domedb.perception.cs.cmu.edu/) | Testing & Visualization |
-| [GigaCrowd](https://gigavision.cn/) | Testing & Visualization |
-| [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) | Visualization |
+| MPII | Training |
+| COCO | Training |
+| Panoptic | Testing & Visualization |
+| GigaCrowd | Testing & Visualization |
+| CrowdPose | Visualization |
 
 **Step 4:**<br>
 Run training.
@@ -51,7 +51,7 @@ Key options in `cfg_files/config.yaml`:
 model: relation_multimodal   # relation_multimodal | relation_pose_rgb | relation_depth_rgb
 trainset: MPII_CLIFF COCO
 testset: Panoptic            # Panoptic | GigaCrowd
-train_loss: SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss
+train_loss: SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss  # Contrastive loss is applied by default
 batchsize: 32
 epoch: 60
 lr: 0.0001
@@ -83,7 +83,6 @@ To address severe occlusions and depth ambiguity in dense crowds, we propose Con
 
 - [x] Training code release
 - [x] Pretrained model release
-- [ ] Demo code release
 
 ## Citation
 If you find this code useful for your research, please consider citing the paper.

@@ -1,18 +1,17 @@
-# MultiModal-HMR
-# Multimodal 3D Human Mesh Recovery with Relational Reasoning
+# CoMHR: Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery
 
-The official code for the paper "Multimodal 3D Human Mesh Recovery with Relational Reasoning"<br>
+The official code for the paper "Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery".<br>
 [Buzhen Huang](http://www.buzhenhuang.com/)<br>
 \[[Paper](#)\]
 
-![figure](/assets/pipeline.jpg)
+![figure](/assets/pipeline.png)
 
 ## Installation
-Create conda environment and install dependencies.
+Create conda environment and install dependencies. The framework is tested on Python 3.10, PyTorch 2.1.2, and CUDA 11.8.
 ```bash
-conda create -n Multimodal python=3.9
-conda activate Multimodal
-pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu111  # install pytorch
+conda create -n comhr python=3.10
+conda activate comhr
+pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 
@@ -30,9 +29,9 @@ Download datasets and place them in `data/datasets`. The following datasets are 
 |---------|-------|
 | [MPII](http://human-pose.mpi-inf.mpg.de/) | Training |
 | [COCO](https://cocodataset.org/) | Training |
-| [Panoptic](http://domedb.perception.cs.cmu.edu/) | Testing |
-| [GigaCrowd](https://gigavision.cn/) | Testing |
-| [Human3.6M](http://vision.imar.ro/human3.6m/) | Testing |
+| [Panoptic](http://domedb.perception.cs.cmu.edu/) | Testing & Visualization |
+| [GigaCrowd](https://gigavision.cn/) | Testing & Visualization |
+| [CrowdPose](https://github.com/Jeff-sjtu/CrowdPose) | Visualization |
 
 **Step 4:**<br>
 Run training.
@@ -54,7 +53,7 @@ model: relation_multimodal   # relation_multimodal | relation_pose_rgb | relatio
 trainset: MPII_CLIFF COCO
 testset: Panoptic            # Panoptic | GigaCrowd
 train_loss: SMPL_Loss Keyp_Loss Mesh_Loss Joint_Loss
-batchsize: 8
+batchsize: 32
 epoch: 60
 lr: 0.0001
 use_sch: True                # cyclic learning rate scheduler
@@ -74,12 +73,12 @@ To use a pretrained model, set `pretrain: True` and update `pretrain_dir` with t
 
 ## Method Overview
 
-This work proposes a multimodal framework for multi-person 3D human mesh recovery. The method fuses RGB images, depth maps, and 3D pose cues through:
+To address severe occlusions and depth ambiguity in dense crowds, we propose Contrastive Multi-modal Hypergraph Reasoning (CoMHR), which synergizes complementary modalities within a high-order topological structure:
 
-- **Multi-Scale Hypergraph Neural Network (MS-HGNN)**: Models inter-person relational context at multiple scales via hypergraph message passing.
-- **Multimodal PastEncoder**: Encodes relational features independently per modality before cross-modal fusion.
-- **Cross-Modal Contrastive Learning**: Aligns representations across modalities to improve robustness and generalization.
-- **Multi-Person Loss Supervision**: Combines SMPL parameter regression, 2D keypoint reprojection, 3D mesh, and joint losses.
+- **Multi-Modal Node Initialization**: Augments RGB features with pseudo-depth maps and occlusion-aware 3D poses. We introduce a *Pelvis Depth Indicator* as a global spatial anchor to explicitly enforce front-back ordering.
+- **Contrastive Hypergraph Construction**: Dynamically constructs a shared-topology hypergraph derived from holistic aggregated features rather than relying on predefined topologies.
+- **Hypergraph Contrastive Learning**: A dual-branch strategy that enhances intra-modal discriminability (clustering individuals with similar actions) and enforces cross-modal orthogonality to maximize feature complementarity.
+- **High-Order Reasoning**: Mitigates single-modal fragility by utilizing collective neighbor cues to infer missing information for occluded subjects across the shared topology.
 
 ## TODOS
 
@@ -89,18 +88,17 @@ This work proposes a multimodal framework for multi-person 3D human mesh recover
 
 ## Citation
 If you find this code useful for your research, please consider citing the paper.
-```
-@inproceedings{multimodalhmr,
-  title={Multimodal 3D Human Mesh Recovery with Relational Reasoning},
-  author={Huang, Buzhen},
-  booktitle={},
-  year={2024},
+```bibtex
+@inproceedings{sun2026comhr,
+  title={Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery},
+  author={},
+  booktitle={Anonymous ICME submission},
+  year={2026},
 }
 ```
 
 ## Acknowledgments
-Some of the code is based on the following works. We gratefully appreciate the impact they have on our work.<br>
-[GroupRec](https://github.com/boycehbz/GroupRec)<br>
-[CLIFF](https://github.com/huawei-noah/noah-research/tree/master/CLIFF)<br>
-[YOLOX](https://github.com/Megvii-BaseDetection/YOLOX)<br>
-[PyMAF](https://github.com/HongwenZhang/PyMAF)<br>
+Our work builds heavily upon [GroupRec](https://github.com/boycehbz/GroupRec). We sincerely thank the authors for their outstanding contribution and open-source effort.<br>
+Some other code is also based on the following works.<br>
+[Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2)<br>
+[OpenPose](https://github.com/CMU-Perceptual-Computing-Lab/openpose)

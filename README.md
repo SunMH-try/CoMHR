@@ -19,7 +19,7 @@ pip install -r requirements.txt
 Download the official SMPL model from [SMPLify website](http://smplify.is.tuebingen.mpg.de/) and put it in `data/SMPL_NEUTRAL.pkl`.
 
 **Step 2:**<br>
-Download trained models and place them in the `data` directory.
+Download trained models from [Baidu Netdisk](https://pan.baidu.com/s/1ar3jVceyKqUiLuGoqGX1Ww?pwd=k3qd) (code: k3qd) and place them in the `data` directory.
 
 **Step 3:**<br>
 Download datasets and place them in `data/datasets`. The following datasets are supported:
@@ -82,8 +82,8 @@ To address severe occlusions and depth ambiguity in dense crowds, we propose Con
 ## TODOS
 
 - [x] Training code release
+- [x] Pretrained model release
 - [ ] Demo code release
-- [ ] Pretrained model release
 
 ## Citation
 If you find this code useful for your research, please consider citing the paper.

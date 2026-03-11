@@ -33,9 +33,14 @@ Download datasets and place them in `data/datasets`. The following datasets are 
 | CrowdPose | Visualization |
 
 **Step 4:**<br>
-Set `mode: train` or `mode: test` in `cfg_files/config.yaml`, then run:
+For training or testing, set `mode: train` or `mode: test` in `cfg_files/config.yaml`, then run:
 ```bash
 python main.py --config cfg_files/config.yaml
+```
+
+For demo inference with SMPL mesh visualization (front / side / top views), run:
+```bash
+python demo.py --config cfg_files/demo.yaml
 ```
 
 ## Configuration
@@ -78,6 +83,7 @@ To address severe occlusions and depth ambiguity in dense crowds, we propose Con
 
 - [x] Training code release
 - [x] Pretrained model release
+- [x] Demo release
 
 ## Citation
 If you find this code useful for your research, please consider citing the paper.

@@ -103,6 +103,10 @@ def parse_config(argv=None):
                         default=0,
                         type=int,
                         help='gpu index.')
+    parser.add_argument('--demo_dir',
+                        default='demo',
+                        type=str,
+                        help='Root folder of demo data (images/, depth/, pose/).')
 
     args = parser.parse_args()
     args_dict = vars(args)

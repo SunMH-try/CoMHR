@@ -872,12 +872,14 @@ class ModelLoader():
                             faces=self.model_smpl_gpu.faces,
                             same_mesh_color=False)
 
-        pred_smpl = renderer.render_front_view(pred_verts, bg_img_rgb=img.copy())
+        white_bg = np.ones_like(img, dtype=np.uint8) * 255
+        pred_front = renderer.render_front_view(pred_verts, bg_img_rgb=img.copy())
+        pred_side  = renderer.render_side_view(pred_verts,  bg_img_rgb=white_bg)
+        pred_top   = renderer.render_top_view(pred_verts,   bg_img_rgb=white_bg)
+        final_img  = np.concatenate((pred_front, pred_side, pred_top), axis=1)
 
-        render_name = "%s" %name
-        cv2.imwrite(os.path.join(output, render_name), pred_smpl)
-
-        # vis_img('pred_smpl', pred_smpl)
+        render_name = "%s" % name
+        cv2.imwrite(os.path.join(output, render_name), final_img)
 
         for i, verts in enumerate(pred_verts):
             mesh_name = os.path.join(output, 'meshes/%s/%05d.obj' %(name.split('.')[0], i))

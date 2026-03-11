@@ -1,0 +1,35 @@
+# Demo config for relation_multimodal
+note: Demo
+
+# Project
+task: relation
+
+# GPU
+gpu_index: 0
+
+# Model
+model: relation_multimodal
+use_prior: False
+
+# Pretrained weights (relative to project root: Multimodal_Final/)
+pretrain: True
+pretrain_dir: "E:/CoHMR/project/DatasetResult/relation_multimodal_Contra_Tz_104.17/trained model/best_relation_epoch038_104.179420.pkl"
+#data/trained_model/best_relation_epoch038_104.179420.pkl
+
+# Demo data folder (relative to project root: Multimodal_Final/)
+demo_dir: demo
+
+# Detector model: data/bytetrack_x_mot17.pth.tar (default in code)
+
+# Fields required by ModelLoader but unused in demo
+mode: demo
+batchsize: 1
+epoch: 1
+worker: 0
+lr: 0.0001
+use_sch: False
+trainset: ''
+testset: Panoptic
+train_loss: SMPL_Loss
+test_loss: MPJPE_H36M_instance
+viz: False

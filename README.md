@@ -1,9 +1,9 @@
 # CoMHR: Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery
 
-The official code for ICME 2026 paper "Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery".<br>
+The official code for the **ICME 2026 Oral** paper "Contrastive Multi-Modal Hypergraph Reasoning for 3D Crowd Mesh Recovery".<br>
 [Minghao Sun*](), [Chongyang Xu*](), [Yitao Xie](), [Buzhen Huang†](http://www.buzhenhuang.com/), [Kun Li](https://cic.tju.edu.cn/faculty/likun/index.html)<br>
 \* Equal Contribution, † Corresponding Author <br>
-\[[Paper](#)\]
+[Paper](https://arxiv.org/pdf/2605.13854)
 
 ![figure](/assets/pipeline.png)
 
